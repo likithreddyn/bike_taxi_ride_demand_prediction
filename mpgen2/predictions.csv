@@ -1,0 +1,20 @@
+Year,Month,Day,Hour,Place,Temperature,Day Status,Temperature Category,Ride Demand
+2024,12,4,14,JP Nagar,29.22,Working Day,Hot,59
+2024,12,4,14,Yelahanka,25.37,Working Day,Moderate,62
+2024,8,6,8,Jayanagar,25.4,Working Day,Moderate,80
+2025,8,11,10,Mahadevapura,25.56,Working Day,Moderate,81
+2025,5,11,4,Hebbal,25.49,Holiday,Moderate,22
+2024,12,5,10,Rajarajeshwari Nagar,26.26,Working Day,Moderate,80
+2024,12,7,10,Rajarajeshwari Nagar,26.78,Working Day,Moderate,80
+2024,12,4,16,Yelahanka,26.89,Working Day,Moderate,82
+2024,12,6,19,Yelahanka,26.79,Working Day,Moderate,82
+2024,12,8,19,Yelahanka,26.79,Holiday,Moderate,112
+2024,12,4,3,Yelahanka,26.79,Working Day,Moderate,23
+2024,12,5,13,Indiranagar,24.19,Working Day,Moderate,62
+2024,12,5,13,Indiranagar,24.02,Working Day,Moderate,62
+2024,12,5,13,Indiranagar,22.54,Working Day,Moderate,62
+2032,7,11,13,Ulsoor,25.0,Holiday,Moderate,93
+2024,12,5,10,JP Nagar,26.22,Working Day,Moderate,79
+2024,12,1,13,Jayanagar,24.72,Holiday,Moderate,92
+2022,7,13,14,Jayanagar,24.47,Working Day,Moderate,42
+2024,12,6,19,Yelahanka,23.66,Working Day,Moderate,83
