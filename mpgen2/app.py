@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 load_dotenv()
 
 # Load the LightGBM model
-MODEL_PATH = r"C:\Users\Likith Reddy\OneDrive\Desktop\mpgen2\model\lgb_model.pkl"  # Ensure this is the correct path
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "model", "lgb_model.pkl")
 with open(MODEL_PATH, 'rb') as file:
     lgb_model = pickle.load(file)
 
