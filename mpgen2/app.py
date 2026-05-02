@@ -20,9 +20,6 @@ GOOGLE_CALENDAR_API_KEY = "AIzaSyAzAfA2xulCmEHyYS9G61NWnzcaPgnGMhQ"
 # OpenWeather API key
 OPENWEATHER_API_KEY = "2e84974857e1d5c6f19d88f89bef1271" 
 
-# CSV file path to store predictions
-CSV_FILE_PATH = r"C:\Users\Likith Reddy\OneDrive\Desktop\mpgen2\predictions.csv"
-
 # Flask app initialization
 app = Flask(__name__)
 
