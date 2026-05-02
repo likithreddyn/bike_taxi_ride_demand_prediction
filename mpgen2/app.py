@@ -2,72 +2,45 @@ from flask import Flask, render_template, request, jsonify
 import os
 import pickle
 import requests
-import csv
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 
 # Load environment variables from .env file
 load_dotenv()
 
-# Load the LightGBM model
+# Load the LightGBM model using relative paths
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "model", "lgb_model.pkl")
-with open(MODEL_PATH, 'rb') as file:
-    lgb_model = pickle.load(file)
 
-# Google Calendar API key
-GOOGLE_CALENDAR_API_KEY = "AIzaSyAzAfA2xulCmEHyYS9G61NWnzcaPgnGMhQ"
+# Safely load the model
+if os.path.exists(MODEL_PATH):
+    with open(MODEL_PATH, 'rb') as file:
+        lgb_model = pickle.load(file)
+else:
+    lgb_model = None
 
-# OpenWeather API key
-OPENWEATHER_API_KEY = "2e84974857e1d5c6f19d88f89bef1271" 
-
-
-CSV_FILE_PATH = os.path.join(os.path.dirname(__file__), "predictions.csv")
+# API Keys (Ideally move these to Vercel Environment Variables)
+GOOGLE_CALENDAR_API_KEY = os.getenv("GOOGLE_CALENDAR_API_KEY", "AIzaSyAzAfA2xulCmEHyYS9G61NWnzcaPgnGMhQ")
+OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", "2e84974857e1d5c6f19d88f89bef1271")
 
 # Flask app initialization
 app = Flask(__name__)
 
 # List of places and their corresponding encodings
 PLACES = {
-    "BTM Layout": 0,
-    "Banashankari": 1,
-    "Bannerghatta": 2,
-    "Bellandur": 3,
-    "Domlur": 4,
-    "HSR Layout": 5,
-    "Hebbal": 6,
-    "Indiranagar": 7,
-    "JP Nagar": 8,
-    "Jayanagar": 9,
-    "Jeevanbhima Nagar": 10,
-    "Koramangala": 11,
-    "Mahadevapura": 12,
-    "Malleswaram": 13,
-    "Marathahalli": 14,
-    "R.T. Nagar": 15,
-    "Rajajinagar": 16,
-    "Rajarajeshwari Nagar": 17,
-    "Sadashivanagar": 18,
-    "Seshadripuram": 19,
-    "Shivajinagar": 20,
-    "Ulsoor": 21,
-    "Vasanthnagar": 22,
-    "Vijaynagar": 23,
-    "Whitefield": 24,
-    "Yelahanka": 25,
-    "Yeshwantpur": 26
+    "BTM Layout": 0, "Banashankari": 1, "Bannerghatta": 2, "Bellandur": 3,
+    "Domlur": 4, "HSR Layout": 5, "Hebbal": 6, "Indiranagar": 7,
+    "JP Nagar": 8, "Jayanagar": 9, "Jeevanbhima Nagar": 10, "Koramangala": 11,
+    "Mahadevapura": 12, "Malleswaram": 13, "Marathahalli": 14, "R.T. Nagar": 15,
+    "Rajajinagar": 16, "Rajarajeshwari Nagar": 17, "Sadashivanagar": 18,
+    "Seshadripuram": 19, "Shivajinagar": 20, "Ulsoor": 21, "Vasanthnagar": 22,
+    "Vijaynagar": 23, "Whitefield": 24, "Yelahanka": 25, "Yeshwantpur": 26
 }
 
 @app.route("/")
 def home():
-    """Render the homepage with input fields."""
     return render_template("index.html", places=PLACES, inputs={})
 
 def get_day_status(year, month, day):
-    """
-    Determine the day status (working day or holiday) using Google Calendar API.
-    Returns:
-        0 for holiday, 1 for working day.
-    """
     date = datetime(year, month, day)
     if date.weekday() == 6:  # Sunday
         return 0  # Holiday
@@ -77,24 +50,29 @@ def get_day_status(year, month, day):
         "timeMin": date.isoformat() + "Z",
         "timeMax": (date + timedelta(days=1)).isoformat() + "Z"
     }
-    response = requests.get(url, params=params)
-    events = response.json().get('items', [])
-    return 0 if events else 1  # Holiday if events exist
+    try:
+        response = requests.get(url, params=params)
+        events = response.json().get('items', [])
+        return 0 if events else 1
+    except:
+        return 1 # Default to working day if API fails
 
 def get_temperature(year, month, day, city):
-    """
-    Fetch the temperature for the given date and city using OpenWeather API.
-    """
     weather_url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={OPENWEATHER_API_KEY}&units=metric"
-    response = requests.get(weather_url).json()
-    if response.get("main"):
-        return response["main"]["temp"]
-    return 25.0  # Default temperature if API fails
+    try:
+        response = requests.get(weather_url).json()
+        if response.get("main"):
+            return response["main"]["temp"]
+    except:
+        pass
+    return 25.0
 
-@app.route("/predict", methods=["POST", "GET"])
+@app.route("/predict", methods=["POST"])
 def predict():
-    """Handle the prediction request."""
-    # Extract inputs from the form
+    if lgb_model is None:
+        return "Model file not found. Check path: " + MODEL_PATH, 500
+
+    # Extract inputs
     year = int(request.form["year"])
     month = int(request.form["month"])
     day = int(request.form["date"])
@@ -106,40 +84,27 @@ def predict():
     temperature = get_temperature(year, month, day, place)
     day_status = get_day_status(year, month, day)
 
-    # Determine temperature category
     if temperature < 18:
-        temperature_category = 0  # Cold
+        temp_cat = 0
     elif 18 <= temperature < 27:
-        temperature_category = 1  # Moderate
+        temp_cat = 1
     else:
-        temperature_category = 2  # Hot
+        temp_cat = 2
 
-    # Prepare input for the model
-    features = [[year, month, day, hour, encoded_place, temperature, day_status, temperature_category]]
-
-    # Predict ride demand
+    # Predict
+    features = [[year, month, day, hour, encoded_place, temperature, day_status, temp_cat]]
     ride_demand = lgb_model.predict(features)[0]
 
-    # Save the prediction to CSV
-    with open(CSV_FILE_PATH, mode='a', newline='', encoding='utf-8') as file:
-        writer = csv.writer(file)
-        if os.stat(CSV_FILE_PATH).st_size == 0:
-            # Write header if the file is empty
-            writer.writerow(["Year", "Month", "Day", "Hour", "Place", "Temperature", "Day Status", "Temperature Category", "Ride Demand"])
-        writer.writerow([year, month, day, hour, place, temperature, "Holiday" if day_status == 0 else "Working Day", ["Cold", "Moderate", "Hot"][temperature_category], int(round(ride_demand))])
-
+    # NOTE: CSV writing is removed because Vercel has a read-only filesystem.
+    
     return render_template(
         "results.html",
         ride_demand=int(round(ride_demand)),
         inputs={
-            "year": year,
-            "month": month,
-            "day": day,
-            "hour": hour,
-            "place": place,
-            "temperature": temperature,
+            "year": year, "month": month, "day": day, "hour": hour,
+            "place": place, "temperature": temperature,
             "day_status": "Holiday" if day_status == 0 else "Working Day",
-            "temperature_category": ["Cold", "Moderate", "Hot"][temperature_category]
+            "temperature_category": ["Cold", "Moderate", "Hot"][temp_cat]
         }
     )
 
