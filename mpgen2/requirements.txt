@@ -1,7 +1,6 @@
 flask
-pandas
-numpy>=1.26.0
-lightgbm
+gunicorn
 requests
 python-dotenv
-gunicorn
+lightgbm
+scikit-learn
